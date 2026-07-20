@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-07-16 11:47:19",
+  "kpis": {
+    "taux_visites_realisees": {
+      "valeur": 88.89,
+      "unite": "%",
+      "realisees": 8,
+      "total": 9
+    },
+    "taux_rapports_valides": {
+      "valeur": 77.78,
+      "unite": "%",
+      "valides": 7,
+      "total": 9
+    },
+    "total_visites": 9,
+    "total_clients_actifs": 5
+  },
+  "visites_par_mois": [
+    {
+      "mois": "2026-07",
+      "nb_visites": 8
+    },
+    {
+      "mois": "2026-08",
+      "nb_visites": 1
+    }
+  ],
+  "visites_par_technicien": [
+    {
+      "technicien": "Nadia Fassi",
+      "nb_visites": 4
+    },
+    {
+      "technicien": "Karim Amrani",
+      "nb_visites": 2
+    },
+    {
+      "technicien": "Omar Tazi",
+      "nb_visites": 2
+    },
+    {
+      "technicien": "said mansori",
+      "nb_visites": 1
+    }
+  ],
+  "top_clients": [
+    {
+      "client": "Capgemini",
+      "nb_visites": 3
+    },
+    {
+      "client": "Optimus Telecom",
+      "nb_visites": 3
+    },
+    {
+      "client": "Accenture Maroc",
+      "nb_visites": 1
+    },
+    {
+      "client": "Atos Maroc",
+      "nb_visites": 1
+    },
+    {
+      "client": "Orange Business",
+      "nb_visites": 1
+    }
+  ],
+  "charts": {
+    "visites_par_mois_html": "assets/analytics/visites_par_mois.html",
+    "visites_par_technicien_html": "assets/analytics/visites_par_technicien.html",
+    "top_clients_html": "assets/analytics/top_clients.html",
+    "taux_realisation_png": "assets/analytics/taux_realisation.png",
+    "visites_par_mois_png": "assets/analytics/visites_par_mois.png"
+  }
+}
