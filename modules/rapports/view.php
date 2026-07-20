@@ -26,7 +26,7 @@ $rapport = $stmt->fetch();
 
 if (!$rapport) {
     setFlash('error', 'Rapport introuvable.');
-    header('Location: index.php');
+    header('Location: ../visites/index.php');
     exit;
 }
 
@@ -37,12 +37,12 @@ $statutLabels = [
 [$label, $badge] = $statutLabels[$rapport['statut']] ?? [$rapport['statut'], 'muted'];
 
 $pageTitle = 'Détail rapport';
-$activeNav = 'rapports';
+$activeNav = 'visites';
 require __DIR__ . '/../../includes/header.php';
 ?>
         <div class="page-header">
           <div><p class="eyebrow">Suivi</p><h1><?=htmlspecialchars($rapport['titre'])?></h1></div>
-          <a class="btn btn-secondary" href="index.php"><i class="fa-solid fa-arrow-left"></i> Retour</a>
+          <a class="btn btn-secondary" href="../visites/view.php?id=<?=(int)$rapport['visite_id']?>"><i class="fa-solid fa-arrow-left"></i> Retour à la visite</a>
         </div>
 
         <section class="panel">

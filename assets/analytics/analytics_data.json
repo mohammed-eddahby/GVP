@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-16 11:47:19",
+  "generated_at": "2026-07-20 11:14:35",
   "kpis": {
     "taux_visites_realisees": {
-      "valeur": 88.89,
+      "valeur": 100.0,
       "unite": "%",
-      "realisees": 8,
+      "realisees": 9,
       "total": 9
     },
     "taux_rapports_valides": {
-      "valeur": 77.78,
+      "valeur": 80.0,
       "unite": "%",
-      "valides": 7,
-      "total": 9
+      "valides": 8,
+      "total": 10
     },
     "total_visites": 9,
     "total_clients_actifs": 5

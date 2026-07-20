@@ -3,7 +3,7 @@
  * includes/header.php
  * Attend les variables suivantes définies AVANT l'include :
  *   $pageTitle  (string) titre de la page
- *   $activeNav  (string) clé de nav active : accueil|utilisateurs|clients|sites|visites|rapports|analytics
+ *   $activeNav  (string) clé de nav active : accueil|utilisateurs|clients|sites|visites|analytics
  *   $user       (array)  utilisateur courant (issu de currentUser())
  * Nécessite includes/auth.php déjà inclus (requireLogin appelé en amont).
  */
@@ -67,10 +67,6 @@ $nom = $user['nom'] ?? '';
 
         <a href="<?=$base?>modules/visites/index.php" class="nav-link <?= $activeNav === 'visites' ? 'active' : '' ?>">
           <i class="fa-solid fa-briefcase"></i><span>Visites</span>
-        </a>
-
-        <a href="<?=$base?>modules/rapports/index.php" class="nav-link <?= $activeNav === 'rapports' ? 'active' : '' ?>">
-          <i class="fa-solid fa-file-lines"></i><span>Rapports</span>
         </a>
 
         <?php if (can('analytics.consulter')): ?>

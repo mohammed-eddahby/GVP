@@ -8,19 +8,42 @@ requireRole(['technicien']);
 $pdo = getPDO();
 $user = currentUser($pdo);
 
+// La création d'un rapport se fait toujours depuis la fiche d'une visite précise
+// (relation 1 visite -> 1 rapport) : visite_id est donc obligatoire.
 $visiteId = (int)($_GET['visite_id'] ?? $_POST['visite_id'] ?? 0);
+if ($visiteId <= 0) {
+    setFlash('error', 'Aucune visite sélectionnée.');
+    header('Location: ../visites/index.php');
+    exit;
+}
 
 // Le technicien ne peut créer un rapport que pour une visite qui lui est assignée.
-$visitesList = $pdo->prepare(
-    "SELECT v.id, v.type_visite, v.date_prevue, s.nom_site, c.nom_entreprise
+$visiteStmt = $pdo->prepare(
+    "SELECT v.id, v.site_id, v.type_visite, v.date_prevue, s.nom_site, c.nom_entreprise
      FROM visites v JOIN sites s ON s.id = v.site_id JOIN clients c ON c.id = s.client_id
-     WHERE v.technicien_id = :uid ORDER BY v.date_prevue DESC"
+     WHERE v.id = :id AND v.technicien_id = :uid"
 );
-$visitesList->execute([':uid' => $user['id']]);
-$visitesList = $visitesList->fetchAll();
+$visiteStmt->execute([':id' => $visiteId, ':uid' => $user['id']]);
+$visite = $visiteStmt->fetch();
+
+if (!$visite) {
+    setFlash('error', 'Cette visite ne vous est pas assignée.');
+    header('Location: ../visites/index.php');
+    exit;
+}
+
+// Relation 1 visite -> 1 rapport : si un rapport existe déjà, on redirige vers celui-ci
+// plutôt que d'en permettre un second.
+$existingStmt = $pdo->prepare('SELECT id FROM rapports WHERE visite_id = :vid LIMIT 1');
+$existingStmt->execute([':vid' => $visiteId]);
+$existingId = $existingStmt->fetchColumn();
+if ($existingId) {
+    header('Location: view.php?id=' . (int)$existingId);
+    exit;
+}
 
 $errors = [];
-$form = ['visite_id' => $visiteId ?: '', 'titre' => 'Rapport de visite', 'contenu' => '', 'soumettre' => false];
+$form = ['titre' => 'Rapport de visite', 'contenu' => '', 'soumettre' => false];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Cas particulier : si le fichier envoyé dépasse post_max_size (php.ini), PHP vide
@@ -30,20 +53,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!csrfCheck()) $errors[] = 'Session expirée, veuillez réessayer.';
-    $form['visite_id'] = trim($_POST['visite_id'] ?? '');
     $form['titre'] = trim($_POST['titre'] ?? '');
     $form['contenu'] = trim($_POST['contenu'] ?? '');
     $form['soumettre'] = isset($_POST['soumettre']);
 
-    if ($form['visite_id'] === '' || !ctype_digit($form['visite_id'])) $errors[] = 'Veuillez sélectionner une visite.';
     if ($form['titre'] === '') $errors[] = 'Le titre est obligatoire.';
 
     if (!$errors) {
-        // Vérifie que la visite appartient bien au technicien connecté
-        $check = $pdo->prepare('SELECT id FROM visites WHERE id = :id AND technicien_id = :uid');
-        $check->execute([':id' => (int)$form['visite_id'], ':uid' => $user['id']]);
-        if (!$check->fetch()) {
-            $errors[] = 'Cette visite ne vous est pas assignée.';
+        // Revérifie qu'aucun rapport n'a été créé entre-temps pour cette visite.
+        $existingStmt->execute([':vid' => $visiteId]);
+        if ($existingStmt->fetchColumn()) {
+            $errors[] = 'Un rapport existe déjà pour cette visite.';
         }
     }
 
@@ -63,17 +83,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  VALUES (:vid, :uid, :titre, :contenu, :statut, :ds, :doc_path, :doc_type)'
             );
             $stmt->execute([
-                ':vid' => (int)$form['visite_id'], ':uid' => $user['id'], ':titre' => $form['titre'],
+                ':vid' => $visiteId, ':uid' => $user['id'], ':titre' => $form['titre'],
                 ':contenu' => $form['contenu'] ?: null, ':statut' => $statut,
                 ':ds' => $form['soumettre'] ? date('Y-m-d H:i:s') : null,
                 ':doc_path' => $document['document_path'], ':doc_type' => $document['document_type'],
             ]);
-            $siteIdStmt = $pdo->prepare('SELECT site_id FROM visites WHERE id = :id');
-            $siteIdStmt->execute([':id' => (int)$form['visite_id']]);
-            $siteIdRapport = $siteIdStmt->fetchColumn();
-            logActivity($pdo, (int)$user['id'], 'creation_rapport', 'Création du rapport "' . $form['titre'] . '"', null, $siteIdRapport !== false ? (int)$siteIdRapport : null);
+            logActivity($pdo, (int)$user['id'], 'creation_rapport', 'Création du rapport "' . $form['titre'] . '"', null, (int)$visite['site_id']);
             setFlash('success', 'Rapport enregistré' . ($form['soumettre'] ? ' et soumis' : ' en brouillon') . '.');
-            header('Location: index.php');
+            header('Location: ../visites/view.php?id=' . $visiteId);
             exit;
         } catch (Throwable $e) {
             supprimerDocumentRapport($document['document_path']);
@@ -83,34 +100,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = 'Nouveau rapport';
-$activeNav = 'rapports';
+$activeNav = 'visites';
 require __DIR__ . '/../../includes/header.php';
 ?>
         <div class="page-header">
           <div><p class="eyebrow">Suivi</p><h1>Nouveau rapport</h1></div>
-          <a class="btn btn-secondary" href="index.php"><i class="fa-solid fa-arrow-left"></i> Retour</a>
+          <a class="btn btn-secondary" href="../visites/view.php?id=<?=$visiteId?>"><i class="fa-solid fa-arrow-left"></i> Retour à la visite</a>
         </div>
 
         <section class="panel">
           <?php foreach ($errors as $err): ?><div class="alert alert-error"><?=htmlspecialchars($err)?></div><?php endforeach; ?>
-          <?php if (!$visitesList): ?>
-            <div class="alert alert-error">Aucune visite ne vous est actuellement assignée.</div>
-          <?php endif; ?>
+          <div class="form-grid">
+            <div class="field full">
+              <label>Visite concernée</label>
+              <p><?=htmlspecialchars($visite['nom_entreprise'] . ' — ' . $visite['nom_site'] . ' (' . date('d/m/Y', strtotime($visite['date_prevue'])) . ')')?></p>
+            </div>
+          </div>
           <form method="post" enctype="multipart/form-data" novalidate>
             <?= csrfField() ?>
+            <input type="hidden" name="visite_id" value="<?=$visiteId?>">
             <input type="hidden" name="MAX_FILE_SIZE" value="10485760">
             <div class="form-grid">
-              <div class="field full">
-                <label for="visite_id">Visite concernée</label>
-                <select id="visite_id" name="visite_id" required>
-                  <option value="">-- Sélectionner une visite --</option>
-                  <?php foreach ($visitesList as $v): ?>
-                  <option value="<?=$v['id']?>" <?= $form['visite_id'] == $v['id'] ? 'selected' : '' ?>>
-                    <?=htmlspecialchars($v['nom_entreprise'] . ' — ' . $v['nom_site'] . ' (' . date('d/m/Y', strtotime($v['date_prevue'])) . ')')?>
-                  </option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
               <div class="field full">
                 <label for="titre">Titre du rapport</label>
                 <input id="titre" name="titre" type="text" required value="<?=htmlspecialchars($form['titre'])?>">
@@ -133,7 +143,7 @@ require __DIR__ . '/../../includes/header.php';
             </div>
             <div class="form-actions">
               <button class="btn btn-primary" type="submit">Enregistrer le rapport</button>
-              <a class="btn btn-secondary" href="index.php">Annuler</a>
+              <a class="btn btn-secondary" href="../visites/view.php?id=<?=$visiteId?>">Annuler</a>
             </div>
           </form>
         </section>

@@ -8,8 +8,52 @@ $pdo = getPDO();
 $user = currentUser($pdo);
 $role = $user['role'];
 
+/** Vérifie qu'une chaîne est une date valide au format Y-m-d (input type="date"). */
+function estDateValide(string $valeur): bool
+{
+    if ($valeur === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $valeur)) {
+        return false;
+    }
+    [$y, $m, $d] = array_map('intval', explode('-', $valeur));
+    return checkdate($m, $d, $y);
+}
+
 $search = trim($_GET['q'] ?? '');
 $statutFilter = $_GET['statut'] ?? '';
+
+$anneeFilter = trim($_GET['annee'] ?? '');
+if ($anneeFilter !== '' && (!ctype_digit($anneeFilter) || (int)$anneeFilter < 2000 || (int)$anneeFilter > 2100)) {
+    $anneeFilter = '';
+}
+
+$dateDebutFilter = trim($_GET['date_debut'] ?? '');
+if (!estDateValide($dateDebutFilter)) {
+    $dateDebutFilter = '';
+}
+$dateFinFilter = trim($_GET['date_fin'] ?? '');
+if (!estDateValide($dateFinFilter)) {
+    $dateFinFilter = '';
+}
+// Si les deux bornes sont inversées, on les échange pour rester tolérant plutôt que de renvoyer 0 résultat.
+if ($dateDebutFilter !== '' && $dateFinFilter !== '' && $dateDebutFilter > $dateFinFilter) {
+    [$dateDebutFilter, $dateFinFilter] = [$dateFinFilter, $dateDebutFilter];
+}
+
+// Restriction commune (rôle technicien) réutilisée par la requête principale
+// et par celle qui peuple le filtre "Année" — la liste des années proposées
+// ne doit refléter que ce que l'utilisateur peut effectivement voir.
+$roleClause = '';
+$roleParams = [];
+if ($role === 'technicien') {
+    $roleClause = ' AND v.technicien_id = :uid';
+    $roleParams[':uid'] = $user['id'];
+}
+
+$anneesStmt = $pdo->prepare(
+    "SELECT DISTINCT YEAR(v.date_prevue) AS annee FROM visites v WHERE 1=1{$roleClause} ORDER BY annee DESC"
+);
+$anneesStmt->execute($roleParams);
+$anneesDisponibles = $anneesStmt->fetchAll(PDO::FETCH_COLUMN);
 
 $sql = "SELECT v.*, s.nom_site, c.nom_entreprise, u.nom AS tech_nom, u.prenom AS tech_prenom
         FROM visites v
@@ -31,6 +75,18 @@ if ($statutFilter !== '' && in_array($statutFilter, ['planifiee','en_cours','rea
     $sql .= " AND v.statut = :statut";
     $params[':statut'] = $statutFilter;
 }
+if ($anneeFilter !== '') {
+    $sql .= " AND YEAR(v.date_prevue) = :annee";
+    $params[':annee'] = (int)$anneeFilter;
+}
+if ($dateDebutFilter !== '') {
+    $sql .= " AND v.date_prevue >= :date_debut";
+    $params[':date_debut'] = $dateDebutFilter;
+}
+if ($dateFinFilter !== '') {
+    $sql .= " AND v.date_prevue <= :date_fin";
+    $params[':date_fin'] = $dateFinFilter;
+}
 $sql .= " ORDER BY v.date_prevue DESC";
 
 $stmt = $pdo->prepare($sql);
@@ -43,6 +99,8 @@ $statutLabels = [
     'realisee'  => ['Réalisée', 'success'],
     'annulee'   => ['Annulée', 'danger'],
 ];
+
+$aDesFiltresActifs = $search !== '' || $statutFilter !== '' || $anneeFilter !== '' || $dateDebutFilter !== '' || $dateFinFilter !== '';
 
 $pageTitle = 'Visites';
 $activeNav = 'visites';
@@ -58,20 +116,50 @@ require __DIR__ . '/../../includes/header.php';
         <section class="panel table-panel">
           <div class="panel-header">
             <div><p class="eyebrow">Liste</p><h3><?= count($visites) ?> visite(s)</h3></div>
-            <form class="panel-actions" method="get">
-              <label class="search-inline" aria-label="Rechercher une visite">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" name="q" placeholder="Rechercher..." value="<?=htmlspecialchars($search)?>">
-              </label>
+          </div>
+
+          <form class="filters-bar" method="get">
+            <label class="search-inline" aria-label="Rechercher une visite">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" name="q" placeholder="Rechercher..." value="<?=htmlspecialchars($search)?>">
+            </label>
+
+            <label class="filter-pill" aria-label="Filtrer par statut">
+              <i class="fa-solid fa-flag"></i>
               <select name="statut" onchange="this.form.submit()">
                 <option value="">Tous statuts</option>
                 <?php foreach ($statutLabels as $key => [$label, ]): ?>
                 <option value="<?=$key?>" <?= $statutFilter === $key ? 'selected' : '' ?>><?=$label?></option>
                 <?php endforeach; ?>
               </select>
-              
-            </form>
-          </div>
+            </label>
+
+            <label class="filter-pill" aria-label="Filtrer par année">
+              <i class="fa-solid fa-calendar-days"></i>
+              <select name="annee" onchange="this.form.submit()">
+                <option value="">Toutes années</option>
+                <?php foreach ($anneesDisponibles as $annee): ?>
+                <option value="<?=$annee?>" <?= $anneeFilter === (string)$annee ? 'selected' : '' ?>><?=$annee?></option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+
+            <div class="filter-date-range" role="group" aria-label="Filtrer par plage de dates">
+              <label class="filter-pill" aria-label="Date de début">
+                <i class="fa-regular fa-calendar"></i>
+                <input type="date" name="date_debut" value="<?=htmlspecialchars($dateDebutFilter)?>">
+              </label>
+              <span class="filter-date-sep" aria-hidden="true">→</span>
+              <label class="filter-pill" aria-label="Date de fin">
+                <input type="date" name="date_fin" value="<?=htmlspecialchars($dateFinFilter)?>">
+              </label>
+            </div>
+
+            <button class="btn btn-primary small filter-submit" type="submit"><i class="fa-solid fa-filter"></i> Filtrer</button>
+            <?php if ($aDesFiltresActifs): ?>
+            <a class="btn btn-secondary small" href="index.php"><i class="fa-solid fa-xmark"></i> Réinitialiser</a>
+            <?php endif; ?>
+          </form>
 
           <div class="table-wrap">
             <table>

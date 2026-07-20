@@ -10,13 +10,15 @@ $user = currentUser($pdo); // vérifie aussi que le compte est toujours actif
 $id = (int)($_GET['id'] ?? 0);
 $mode = ($_GET['mode'] ?? 'download') === 'view' ? 'view' : 'download';
 
-$stmt = $pdo->prepare('SELECT titre, document_path, document_type FROM rapports WHERE id = :id');
+$stmt = $pdo->prepare('SELECT titre, visite_id, document_path, document_type FROM rapports WHERE id = :id');
 $stmt->execute([':id' => $id]);
 $rapport = $stmt->fetch();
 
+$redirectUrl = $rapport ? '../visites/view.php?id=' . (int)$rapport['visite_id'] : '../visites/index.php';
+
 if (!$rapport || empty($rapport['document_path'])) {
     setFlash('error', 'Aucun document joint pour ce rapport.');
-    header('Location: index.php');
+    header('Location: ' . $redirectUrl);
     exit;
 }
 
@@ -32,7 +34,7 @@ if (
     || !is_file($cheminFichier)
 ) {
     setFlash('error', 'Document introuvable sur le serveur.');
-    header('Location: index.php');
+    header('Location: ' . $redirectUrl);
     exit;
 }
 

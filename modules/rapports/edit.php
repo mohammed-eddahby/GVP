@@ -14,7 +14,7 @@ $stmt->execute([':id' => $id]);
 $target = $stmt->fetch();
 if (!$target) {
     setFlash('error', 'Rapport introuvable.');
-    header('Location: index.php');
+    header('Location: ../visites/index.php');
     exit;
 }
 
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $siteIdRapport = $siteIdStmt->fetchColumn();
             logActivity($pdo, (int)$user['id'], 'modification_rapport', 'Modification du rapport "' . $form['titre'] . '"', null, $siteIdRapport !== false ? (int)$siteIdRapport : null);
             setFlash('success', 'Rapport mis à jour' . ($form['soumettre'] ? ' et soumis' : '') . '.');
-            header('Location: index.php');
+            header('Location: ../visites/view.php?id=' . (int)$target['visite_id']);
             exit;
         } catch (Throwable $e) {
             $errors[] = 'Erreur lors de la mise à jour : ' . $e->getMessage();
@@ -59,12 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = 'Modifier rapport';
-$activeNav = 'rapports';
+$activeNav = 'visites';
 require __DIR__ . '/../../includes/header.php';
 ?>
         <div class="page-header">
           <div><p class="eyebrow">Suivi</p><h1>Modifier le rapport</h1></div>
-          <a class="btn btn-secondary" href="index.php"><i class="fa-solid fa-arrow-left"></i> Retour</a>
+          <a class="btn btn-secondary" href="../visites/view.php?id=<?=(int)$target['visite_id']?>"><i class="fa-solid fa-arrow-left"></i> Retour à la visite</a>
         </div>
 
         <section class="panel">
@@ -89,7 +89,7 @@ require __DIR__ . '/../../includes/header.php';
             </div>
             <div class="form-actions">
               <button class="btn btn-primary" type="submit">Enregistrer</button>
-              <a class="btn btn-secondary" href="index.php">Annuler</a>
+              <a class="btn btn-secondary" href="../visites/view.php?id=<?=(int)$target['visite_id']?>">Annuler</a>
             </div>
           </form>
         </section>

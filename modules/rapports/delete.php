@@ -11,7 +11,7 @@ $role = $user['role'];
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !csrfCheck()) {
     setFlash('error', 'Requête invalide.');
-    header('Location: index.php');
+    header('Location: ../visites/index.php');
     exit;
 }
 
@@ -21,11 +21,16 @@ $stmt = $pdo->prepare('SELECT * FROM rapports WHERE id = :id');
 $stmt->execute([':id' => $id]);
 $target = $stmt->fetch();
 
+// La visite reste accessible même si le rapport est refusé/supprimé : c'est
+// toujours vers sa fiche que l'on doit revenir (le module Rapports n'a plus
+// de page de liste propre).
+$redirectUrl = $target ? '../visites/view.php?id=' . (int)$target['visite_id'] : '../visites/index.php';
+
 $isOwnerDraft = $target && $role === 'technicien' && (int)$target['redige_par'] === (int)$user['id'] && $target['statut'] === 'brouillon';
 
 if (!$target || (!can('rapports.valider') && $role !== 'administrateur' && !$isOwnerDraft)) {
     setFlash('error', 'Suppression non autorisée.');
-    header('Location: index.php');
+    header('Location: ' . $redirectUrl);
     exit;
 }
 
@@ -43,5 +48,5 @@ try {
     setFlash('error', 'Suppression impossible : ' . $e->getMessage());
 }
 
-header('Location: index.php');
+header('Location: ' . $redirectUrl);
 exit;

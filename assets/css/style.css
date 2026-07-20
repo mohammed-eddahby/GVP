@@ -805,3 +805,79 @@ tr.gvp-no-results i { font-size: 1.6rem; display: block; margin-bottom: 8px; }
 .stat-card:hover, .kpi-card:hover, .chart-card:hover {
   box-shadow: 0 26px 50px rgba(245,130,32,0.12);
 }
+
+/* ============================================================
+   Barre de filtres avancés (module Visites : recherche, statut,
+   année, plage de dates) — même langage visuel que .search-inline
+   mais décliné en plusieurs "pilules" alignées, thème sombre/orange.
+   ============================================================ */
+.filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  height: 40px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.filter-pill i { color: var(--accent); font-size: .85rem; }
+.filter-pill select,
+.filter-pill input[type="date"] {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: .88rem;
+  padding: 0;
+  height: 100%;
+  cursor: pointer;
+}
+.filter-pill input[type="date"] { cursor: text; min-width: 130px; }
+/* Normalise l'icône calendrier native pour qu'elle suive le thème sombre */
+.filter-pill input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6) sepia(1) saturate(4) hue-rotate(-10deg);
+  cursor: pointer;
+  opacity: .85;
+}
+.filter-pill:hover {
+  border-color: rgba(245,130,32,0.4);
+  background: rgba(245,130,32,0.07);
+}
+.filter-pill:focus-within {
+  border-color: rgba(245,130,32,0.6);
+  box-shadow: 0 0 0 3px rgba(245,130,32,0.15);
+  background: rgba(245,130,32,0.08);
+}
+
+.filter-date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filter-date-range .filter-pill { padding-right: 12px; }
+.filter-date-sep {
+  color: var(--text-muted);
+  font-size: .8rem;
+}
+
+.filter-submit { display: inline-flex; align-items: center; gap: 8px; }
+
+@media (max-width: 700px) {
+  .filters-bar { gap: 8px; }
+  .filter-pill, .filter-date-range { width: 100%; }
+  .filter-date-range { flex-wrap: wrap; }
+}

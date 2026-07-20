@@ -29,9 +29,10 @@ if ($role === 'technicien' && (int)$visite['technicien_id'] !== (int)$user['id']
     requireRole(['__forbidden__']);
 }
 
-$rapports = $pdo->prepare('SELECT r.*, u.nom, u.prenom FROM rapports r LEFT JOIN utilisateurs u ON u.id = r.redige_par WHERE r.visite_id = :id ORDER BY r.created_at DESC');
-$rapports->execute([':id' => $id]);
-$rapports = $rapports->fetchAll();
+// Relation 1 visite -> 1 rapport : au plus un rapport par visite.
+$rapportStmt = $pdo->prepare('SELECT r.*, u.nom, u.prenom FROM rapports r LEFT JOIN utilisateurs u ON u.id = r.redige_par WHERE r.visite_id = :id LIMIT 1');
+$rapportStmt->execute([':id' => $id]);
+$rapport = $rapportStmt->fetch() ?: null;
 
 $statutLabels = [
     'planifiee' => ['Planifiée', 'info'], 'en_cours' => ['En cours', 'warning'],
@@ -41,6 +42,13 @@ $rapportStatutLabels = [
     'brouillon' => ['Brouillon', 'muted'], 'soumis' => ['Soumis', 'warning'],
     'valide' => ['Validé', 'success'], 'rejete' => ['Rejeté', 'danger'],
 ];
+
+// Mêmes règles RBAC que celles historiquement appliquées dans le module Rapports.
+$peutCreerRapport = !$rapport && can('rapports.creer') && ($role !== 'technicien' || (int)$visite['technicien_id'] === (int)$user['id']);
+$peutModifierRapport = $rapport && $role === 'technicien' && (int)$rapport['redige_par'] === (int)$user['id'] && in_array($rapport['statut'], ['brouillon', 'rejete'], true);
+$estBrouillonProprietaire = $rapport && $role === 'technicien' && (int)$rapport['redige_par'] === (int)$user['id'] && $rapport['statut'] === 'brouillon';
+$peutSupprimerRapport = $rapport && (can('rapports.valider') || $role === 'administrateur' || $estBrouillonProprietaire);
+$peutValiderRapport = $rapport && can('rapports.valider') && $rapport['statut'] === 'soumis';
 [$label, $badge] = $statutLabels[$visite['statut']] ?? [$visite['statut'], 'muted'];
 
 $pageTitle = 'Détail visite';
@@ -67,29 +75,56 @@ require __DIR__ . '/../../includes/header.php';
 
         <section class="panel table-panel">
           <div class="panel-header">
-            <div><p class="eyebrow">Rapports</p><h3><?= count($rapports) ?> rapport(s) lié(s)</h3></div>
-            <?php if (can('rapports.creer') && ($role !== 'technicien' || (int)$visite['technicien_id'] === (int)$user['id'])): ?>
-            <a class="btn btn-secondary small" href="../rapports/create.php?visite_id=<?=$visite['id']?>">Nouveau rapport</a>
+            <div><p class="eyebrow">Suivi</p><h3>Rapport</h3></div>
+            <?php if ($peutCreerRapport): ?>
+            <a class="btn btn-primary small" href="../rapports/create.php?visite_id=<?=$visite['id']?>"><i class="fa-solid fa-plus"></i> Créer le rapport</a>
             <?php endif; ?>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Titre</th><th>Rédigé par</th><th>Statut</th><th>Date</th><th>Action</th></tr></thead>
-              <tbody>
-                <?php if (!$rapports): ?>
-                <tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-file-circle-xmark"></i>Aucun rapport pour cette visite.</div></td></tr>
-                <?php endif; ?>
-                <?php foreach ($rapports as $r): [$rl, $rb] = $rapportStatutLabels[$r['statut']] ?? [$r['statut'], 'muted']; ?>
-                <tr>
-                  <td><?=htmlspecialchars($r['titre'])?></td>
-                  <td><?=htmlspecialchars(trim(($r['prenom'] ?? '') . ' ' . ($r['nom'] ?? '')) ?: '—')?></td>
-                  <td><span class="badge <?=$rb?>"><?=$rl?></span></td>
-                  <td><?=htmlspecialchars(date('d/m/Y', strtotime($r['created_at'])))?></td>
-                  <td><a class="btn btn-secondary small" href="../rapports/view.php?id=<?=$r['id']?>"><i class="fa-solid fa-eye"></i></a></td>
-                </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
+
+          <?php if (!$rapport): ?>
+          <div class="empty-state">
+            <i class="fa-solid fa-file-circle-xmark"></i>
+            Aucun rapport pour cette visite.
+            <?php if (!$peutCreerRapport): ?><br><small>Le rapport ne peut être créé que par le technicien assigné à cette visite.</small><?php endif; ?>
           </div>
+          <?php else: [$rl, $rb] = $rapportStatutLabels[$rapport['statut']] ?? [$rapport['statut'], 'muted']; ?>
+          <div class="form-grid">
+            <div class="field"><label>Titre</label><p><?=htmlspecialchars($rapport['titre'])?></p></div>
+            <div class="field"><label>Statut</label><p><span class="badge <?=$rb?>"><?=$rl?></span></p></div>
+            <div class="field"><label>Rédigé par</label><p><?=htmlspecialchars(trim(($rapport['prenom'] ?? '') . ' ' . ($rapport['nom'] ?? '')) ?: '—')?></p></div>
+            <div class="field"><label>Date de création</label><p><?=htmlspecialchars(date('d/m/Y', strtotime($rapport['created_at'])))?></p></div>
+            <div class="field full">
+              <label>Document joint</label>
+              <?php if (!empty($rapport['document_path'])): ?>
+              <p>
+                <i class="fa-solid fa-paperclip"></i> Document <?=strtoupper((string)$rapport['document_type'])?> joint
+                &nbsp;—&nbsp;
+                <a href="../rapports/download.php?id=<?=$rapport['id']?>&mode=view" target="_blank" rel="noopener">Ouvrir</a>
+                &nbsp;|&nbsp;
+                <a href="../rapports/download.php?id=<?=$rapport['id']?>&mode=download">Télécharger</a>
+              </p>
+              <?php else: ?>
+              <p style="color:var(--text-muted);">Aucun document joint.</p>
+              <?php endif; ?>
+            </div>
+          </div>
+          <div class="form-actions">
+            <a class="btn btn-secondary small" href="../rapports/view.php?id=<?=$rapport['id']?>"><i class="fa-solid fa-eye"></i> Voir le rapport</a>
+            <?php if ($peutModifierRapport): ?>
+            <a class="btn btn-secondary small" href="../rapports/edit.php?id=<?=$rapport['id']?>"><i class="fa-solid fa-pen"></i> Modifier</a>
+            <?php endif; ?>
+            <?php if ($peutValiderRapport): ?>
+            <a class="btn btn-primary small" href="../rapports/validate.php?id=<?=$rapport['id']?>&action=valider" onclick="return confirm('Valider ce rapport ?');">Valider</a>
+            <a class="btn btn-danger small" href="../rapports/validate.php?id=<?=$rapport['id']?>&action=rejeter" onclick="return confirm('Rejeter ce rapport ?');">Rejeter</a>
+            <?php endif; ?>
+            <?php if ($peutSupprimerRapport): ?>
+            <form method="post" action="../rapports/delete.php" onsubmit="return confirm('Supprimer ce rapport ?');" style="display:inline;">
+              <?= csrfField() ?>
+              <input type="hidden" name="id" value="<?=$rapport['id']?>">
+              <button class="btn btn-danger small" type="submit"><i class="fa-solid fa-trash"></i> Supprimer</button>
+            </form>
+            <?php endif; ?>
+          </div>
+          <?php endif; ?>
         </section>
 <?php require __DIR__ . '/../../includes/footer.php'; ?>

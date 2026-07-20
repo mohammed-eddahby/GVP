@@ -12,22 +12,26 @@ $action = $_GET['action'] ?? '';
 
 if (!in_array($action, ['valider', 'rejeter'], true)) {
     setFlash('error', 'Action invalide.');
-    header('Location: index.php');
+    header('Location: ../visites/index.php');
     exit;
 }
 
 try {
     $stmt = $pdo->prepare(
-        'SELECT r.titre, r.statut, v.site_id
+        'SELECT r.titre, r.statut, r.visite_id, v.site_id
          FROM rapports r JOIN visites v ON v.id = r.visite_id
          WHERE r.id = :id'
     );
     $stmt->execute([':id' => $id]);
     $rapport = $stmt->fetch();
 
+    // La visite reste accessible même si le rapport ne peut pas être traité :
+    // c'est toujours vers sa fiche que l'on doit revenir.
+    $redirectUrl = $rapport ? '../visites/view.php?id=' . (int)$rapport['visite_id'] : '../visites/index.php';
+
     if (!$rapport || $rapport['statut'] !== 'soumis') {
         setFlash('error', 'Ce rapport ne peut pas être traité.');
-        header('Location: index.php');
+        header('Location: ' . $redirectUrl);
         exit;
     }
 
@@ -41,7 +45,8 @@ try {
     setFlash('success', 'Rapport ' . ($action === 'valider' ? 'validé' : 'rejeté') . '.');
 } catch (Throwable $e) {
     setFlash('error', 'Erreur : ' . $e->getMessage());
+    $redirectUrl = $redirectUrl ?? '../visites/index.php';
 }
 
-header('Location: index.php');
+header('Location: ' . $redirectUrl);
 exit;
