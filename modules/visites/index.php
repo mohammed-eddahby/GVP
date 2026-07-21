@@ -19,7 +19,7 @@ function estDateValide(string $valeur): bool
 }
 
 $search = trim($_GET['q'] ?? '');
-$statutFilter = $_GET['statut'] ?? '';
+$statutFilter = $_GET['statut'] ?? 'realisee';
 
 $anneeFilter = trim($_GET['annee'] ?? '');
 if ($anneeFilter !== '' && (!ctype_digit($anneeFilter) || (int)$anneeFilter < 2000 || (int)$anneeFilter > 2100)) {

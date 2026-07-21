@@ -9,47 +9,66 @@ $user = currentUser($pdo);
 $role = $user['role'];
 
 $id = (int)($_GET['id'] ?? 0);
-$stmt = $pdo->prepare('SELECT * FROM rapports WHERE id = :id');
+$stmt = $pdo->prepare('SELECT * FROM visites WHERE id = :id');
 $stmt->execute([':id' => $id]);
 $target = $stmt->fetch();
 if (!$target) {
-    setFlash('error', 'Rapport introuvable.');
+    setFlash('error', 'Visite introuvable.');
     header('Location: index.php');
     exit;
 }
 
-$isOwner = $role === 'technicien' && (int)$target['redige_par'] === (int)$user['id'];
-if (!$isOwner || !in_array($target['statut'], ['brouillon', 'rejete'], true)) {
+// Mêmes règles d'accès que celles utilisées pour afficher le bouton "Modifier"
+// dans la liste des visites (index.php) : gestion complète ou technicien assigné.
+$peutModifier = can('visites.gerer') || ($role === 'technicien' && (int)$target['technicien_id'] === (int)$user['id']);
+if (!$peutModifier) {
     requireRole(['__forbidden__']);
 }
 
+$sitesList = $pdo->query(
+    "SELECT s.id, s.nom_site, c.nom_entreprise FROM sites s JOIN clients c ON c.id = s.client_id WHERE s.actif = 1 ORDER BY c.nom_entreprise, s.nom_site"
+)->fetchAll();
+$techList = $pdo->query("SELECT id, nom, prenom, role FROM utilisateurs WHERE actif = 1 AND can_be_assigned_to_visits = 1 ORDER BY prenom")->fetchAll();
+
 $errors = [];
-$form = ['titre' => $target['titre'], 'contenu' => $target['contenu'], 'soumettre' => false];
+$form = [
+    'site_id' => (string)$target['site_id'],
+    'technicien_id' => $target['technicien_id'] !== null ? (string)$target['technicien_id'] : '',
+    'type_visite' => $target['type_visite'],
+    'date_prevue' => $target['date_prevue'],
+    'date_realisee' => $target['date_realisee'] ?? '',
+    'statut' => $target['statut'],
+    'notes' => $target['notes'] ?? '',
+];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrfCheck()) $errors[] = 'Session expirée, veuillez réessayer.';
-    $form['titre'] = trim($_POST['titre'] ?? '');
-    $form['contenu'] = trim($_POST['contenu'] ?? '');
-    $form['soumettre'] = isset($_POST['soumettre']);
+    foreach (['site_id','technicien_id','type_visite','date_prevue','date_realisee','statut','notes'] as $k) {
+        $form[$k] = trim($_POST[$k] ?? '');
+    }
 
-    if ($form['titre'] === '') $errors[] = 'Le titre est obligatoire.';
+    if ($form['site_id'] === '' || !ctype_digit($form['site_id'])) $errors[] = 'Veuillez sélectionner un site.';
+    if ($form['date_prevue'] === '') $errors[] = 'La date prévue est obligatoire.';
+    if (!in_array($form['statut'], ['planifiee','en_cours','realisee','annulee'], true)) $errors[] = 'Statut invalide.';
 
     if (!$errors) {
         try {
-            $statut = $form['soumettre'] ? 'soumis' : 'brouillon';
             $stmt = $pdo->prepare(
-                'UPDATE rapports SET titre=:titre, contenu=:contenu, statut=:statut, date_soumission=:ds,
-                 valide_par=NULL, date_validation=NULL WHERE id=:id'
+                'UPDATE visites SET site_id=:sid, technicien_id=:tid, type_visite=:type, date_prevue=:date,
+                 date_realisee=:date_realisee, statut=:statut, notes=:notes WHERE id=:id'
             );
             $stmt->execute([
-                ':titre' => $form['titre'], ':contenu' => $form['contenu'] ?: null, ':statut' => $statut,
-                ':ds' => $form['soumettre'] ? date('Y-m-d H:i:s') : null, ':id' => $id,
+                ':sid' => (int)$form['site_id'],
+                ':tid' => $form['technicien_id'] !== '' ? (int)$form['technicien_id'] : null,
+                ':type' => $form['type_visite'] ?: 'Visite préventive',
+                ':date' => $form['date_prevue'],
+                ':date_realisee' => $form['date_realisee'] !== '' ? $form['date_realisee'] : null,
+                ':statut' => $form['statut'],
+                ':notes' => $form['notes'] ?: null,
+                ':id' => $id,
             ]);
-            $siteIdStmt = $pdo->prepare('SELECT site_id FROM visites WHERE id = :id');
-            $siteIdStmt->execute([':id' => (int)$target['visite_id']]);
-            $siteIdRapport = $siteIdStmt->fetchColumn();
-            logActivity($pdo, (int)$user['id'], 'modification_rapport', 'Modification du rapport "' . $form['titre'] . '"', null, $siteIdRapport !== false ? (int)$siteIdRapport : null);
-            setFlash('success', 'Rapport mis à jour' . ($form['soumettre'] ? ' et soumis' : '') . '.');
+            logActivity($pdo, (int)$user['id'], 'modification_visite', 'Modification de la visite du ' . $form['date_prevue'], null, (int)$form['site_id']);
+            setFlash('success', 'Visite mise à jour avec succès.');
             header('Location: index.php');
             exit;
         } catch (Throwable $e) {
@@ -58,12 +77,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pageTitle = 'Modifier rapport';
-$activeNav = 'rapports';
+$pageTitle = 'Modifier la visite';
+$activeNav = 'visites';
 require __DIR__ . '/../../includes/header.php';
 ?>
         <div class="page-header">
-          <div><p class="eyebrow">Suivi</p><h1>Modifier le rapport</h1></div>
+          <div><p class="eyebrow">Suivi</p><h1>Modifier la visite</h1></div>
           <a class="btn btn-secondary" href="index.php"><i class="fa-solid fa-arrow-left"></i> Retour</a>
         </div>
 
@@ -73,18 +92,47 @@ require __DIR__ . '/../../includes/header.php';
             <?= csrfField() ?>
             <div class="form-grid">
               <div class="field full">
-                <label for="titre">Titre du rapport</label>
-                <input id="titre" name="titre" type="text" required value="<?=htmlspecialchars($form['titre'])?>">
+                <label for="site_id">Site</label>
+                <select id="site_id" name="site_id" required>
+                  <option value="">-- Sélectionner un site --</option>
+                  <?php foreach ($sitesList as $s): ?>
+                  <option value="<?=$s['id']?>" <?= $form['site_id'] == $s['id'] ? 'selected' : '' ?>><?=htmlspecialchars($s['nom_entreprise'] . ' — ' . $s['nom_site'])?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="field">
+                <label for="technicien_id">Technicien assigné</label>
+                <select id="technicien_id" name="technicien_id">
+                  <option value="">-- Non assigné --</option>
+                  <?php foreach ($techList as $t): ?>
+                  <option value="<?=$t['id']?>" <?= $form['technicien_id'] == $t['id'] ? 'selected' : '' ?>><?=htmlspecialchars($t['prenom'] . ' ' . $t['nom'] . ' (' . roleLabel($t['role']) . ')')?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="field">
+                <label for="type_visite">Type de visite</label>
+                <input id="type_visite" name="type_visite" type="text" value="<?=htmlspecialchars($form['type_visite'])?>">
+              </div>
+              <div class="field">
+                <label for="date_prevue">Date prévue</label>
+                <input id="date_prevue" name="date_prevue" type="date" required value="<?=htmlspecialchars($form['date_prevue'])?>">
+              </div>
+              <div class="field">
+                <label for="date_realisee">Date réalisée</label>
+                <input id="date_realisee" name="date_realisee" type="date" value="<?=htmlspecialchars((string)$form['date_realisee'])?>">
+              </div>
+              <div class="field">
+                <label for="statut">Statut</label>
+                <select id="statut" name="statut">
+                  <option value="planifiee" <?= $form['statut']==='planifiee'?'selected':'' ?>>Planifiée</option>
+                  <option value="en_cours" <?= $form['statut']==='en_cours'?'selected':'' ?>>En cours</option>
+                  <option value="realisee" <?= $form['statut']==='realisee'?'selected':'' ?>>Réalisée</option>
+                  <option value="annulee" <?= $form['statut']==='annulee'?'selected':'' ?>>Annulée</option>
+                </select>
               </div>
               <div class="field full">
-                <label for="contenu">Contenu</label>
-                <textarea id="contenu" name="contenu" style="min-height:200px;"><?=htmlspecialchars((string)$form['contenu'])?></textarea>
-              </div>
-              <div class="field full">
-                <label style="display:flex;align-items:center;gap:8px;">
-                  <input type="checkbox" name="soumettre" style="width:auto;">
-                  Soumettre pour validation (sinon reste en brouillon)
-                </label>
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes"><?=htmlspecialchars((string)$form['notes'])?></textarea>
               </div>
             </div>
             <div class="form-actions">

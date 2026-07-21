@@ -21,12 +21,26 @@ try {
     $target = $stmt->fetch();
 
     if ($target) {
-        logActivity($pdo, (int)$user['id'], 'suppression_client', 'Suppression du client ' . $target['nom_entreprise'], $id);
-        // ON DELETE CASCADE supprime automatiquement les sites/visites/rapports liés.
-        // ON DELETE SET NULL sur journal_activite.client_id conserve la ligne de log ci-dessus.
-        $del = $pdo->prepare('DELETE FROM clients WHERE id = :id');
-        $del->execute([':id' => $id]);
-        setFlash('success', 'Client supprimé.');
+        // Compter toutes les visites réelles liées aux sites de ce client
+        // (et non simplement le nombre de sites).
+        $countStmt = $pdo->prepare(
+            'SELECT COUNT(*) FROM visites v
+             INNER JOIN sites s ON s.id = v.site_id
+             WHERE s.client_id = :id'
+        );
+        $countStmt->execute([':id' => $id]);
+        $nbVisites = (int)$countStmt->fetchColumn();
+
+        if ($nbVisites > 0) {
+            setFlash('error', 'Impossible de supprimer ce client car il possède des visites enregistrées.');
+        } else {
+            logActivity($pdo, (int)$user['id'], 'suppression_client', 'Suppression du client ' . $target['nom_entreprise'], $id);
+            // ON DELETE CASCADE supprime automatiquement les sites/rapports liés (sans visite ici).
+            // ON DELETE SET NULL sur journal_activite.client_id conserve la ligne de log ci-dessus.
+            $del = $pdo->prepare('DELETE FROM clients WHERE id = :id');
+            $del->execute([':id' => $id]);
+            setFlash('success', 'Client supprimé.');
+        }
     } else {
         setFlash('error', 'Client introuvable.');
     }

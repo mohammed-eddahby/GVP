@@ -36,24 +36,41 @@ if ($totalVisites > 0) {
 $rapportsCrees = (int)$pdo->query('SELECT COUNT(DISTINCT visite_id) c FROM rapports')->fetch()['c'];
 
 // Dernières visites (filtrées pour un technicien : uniquement les siennes)
+// + filtre optionnel par année (date_prevue), sans toucher aux statistiques ci-dessus.
+$anneeFilter = $_GET['annee'] ?? '';
+$anneeFilter = (ctype_digit($anneeFilter) && strlen($anneeFilter) === 4) ? $anneeFilter : '';
+
+$anneesDisponibles = $pdo->query(
+    'SELECT DISTINCT YEAR(date_prevue) AS annee FROM visites WHERE date_prevue IS NOT NULL ORDER BY annee DESC'
+)->fetchAll(PDO::FETCH_COLUMN);
+
 if ($role === 'technicien') {
-    $stmtVisites = $pdo->prepare(
-        'SELECT v.id, v.type_visite, v.statut, v.date_prevue, s.nom_site, c.nom_entreprise
+    $sqlVisites = 'SELECT v.id, v.type_visite, v.statut, v.date_prevue, s.nom_site, c.nom_entreprise
          FROM visites v
          JOIN sites s ON s.id = v.site_id
          JOIN clients c ON c.id = s.client_id
-         WHERE v.technicien_id = :uid
-         ORDER BY v.date_prevue DESC LIMIT 6'
-    );
-    $stmtVisites->execute([':uid' => $user['id']]);
+         WHERE v.technicien_id = :uid';
+    $paramsVisites = [':uid' => $user['id']];
+    if ($anneeFilter !== '') {
+        $sqlVisites .= ' AND YEAR(v.date_prevue) = :annee';
+        $paramsVisites[':annee'] = $anneeFilter;
+    }
+    $sqlVisites .= ' ORDER BY v.date_prevue DESC LIMIT 6';
+    $stmtVisites = $pdo->prepare($sqlVisites);
+    $stmtVisites->execute($paramsVisites);
 } else {
-    $stmtVisites = $pdo->query(
-        'SELECT v.id, v.type_visite, v.statut, v.date_prevue, s.nom_site, c.nom_entreprise
+    $sqlVisites = 'SELECT v.id, v.type_visite, v.statut, v.date_prevue, s.nom_site, c.nom_entreprise
          FROM visites v
          JOIN sites s ON s.id = v.site_id
-         JOIN clients c ON c.id = s.client_id
-         ORDER BY v.date_prevue DESC LIMIT 6'
-    );
+         JOIN clients c ON c.id = s.client_id';
+    $paramsVisites = [];
+    if ($anneeFilter !== '') {
+        $sqlVisites .= ' WHERE YEAR(v.date_prevue) = :annee';
+        $paramsVisites[':annee'] = $anneeFilter;
+    }
+    $sqlVisites .= ' ORDER BY v.date_prevue DESC LIMIT 6';
+    $stmtVisites = $pdo->prepare($sqlVisites);
+    $stmtVisites->execute($paramsVisites);
 }
 $dernieresVisites = $stmtVisites->fetchAll();
 
@@ -142,7 +159,17 @@ require __DIR__ . '/includes/header.php';
                 <p class="eyebrow">Vue générale</p>
                 <h3><?= $role === 'technicien' ? 'Mes prochaines visites' : 'Dernières visites' ?></h3>
               </div>
-              <a class="btn btn-secondary small" href="modules/visites/index.php">Voir tout</a>
+              <div class="panel-header-actions">
+                <form method="get" class="year-filter">
+                  <select name="annee" onchange="this.form.submit()" aria-label="Filtrer par année">
+                    <option value="">Toutes</option>
+                    <?php foreach ($anneesDisponibles as $an): ?>
+                    <option value="<?=$an?>" <?= $anneeFilter === (string)$an ? 'selected' : '' ?>><?=$an?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </form>
+                <a class="btn btn-secondary small" href="modules/visites/index.php">Voir tout</a>
+              </div>
             </div>
 
             <div class="activity-list">

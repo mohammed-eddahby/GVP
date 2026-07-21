@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-07-20 11:14:35",
+  "generated_at": "2026-07-20 13:59:13",
   "kpis": {
     "taux_visites_realisees": {
-      "valeur": 100.0,
+      "valeur": 90.0,
       "unite": "%",
       "realisees": 9,
-      "total": 9
-    },
-    "taux_rapports_valides": {
-      "valeur": 80.0,
-      "unite": "%",
-      "valides": 8,
       "total": 10
     },
-    "total_visites": 9,
+    "taux_rapports_valides": {
+      "valeur": 55.56,
+      "unite": "%",
+      "valides": 5,
+      "total": 9
+    },
+    "total_visites": 10,
     "total_clients_actifs": 5
   },
   "visites_par_mois": [
@@ -24,12 +24,16 @@
     {
       "mois": "2026-08",
       "nb_visites": 1
+    },
+    {
+      "mois": "2027-01",
+      "nb_visites": 1
     }
   ],
   "visites_par_technicien": [
     {
       "technicien": "Nadia Fassi",
-      "nb_visites": 4
+      "nb_visites": 5
     },
     {
       "technicien": "Karim Amrani",
@@ -40,22 +44,18 @@
       "nb_visites": 2
     },
     {
-      "technicien": "said mansori",
+      "technicien": "Mohammed Mahfoud",
       "nb_visites": 1
     }
   ],
   "top_clients": [
     {
+      "client": "Optimus Telecom",
+      "nb_visites": 5
+    },
+    {
       "client": "Capgemini",
       "nb_visites": 3
-    },
-    {
-      "client": "Optimus Telecom",
-      "nb_visites": 3
-    },
-    {
-      "client": "Accenture Maroc",
-      "nb_visites": 1
     },
     {
       "client": "Atos Maroc",

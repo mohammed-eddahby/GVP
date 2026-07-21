@@ -111,7 +111,7 @@ require __DIR__ . '/../../includes/header.php';
           <div class="form-actions">
             <a class="btn btn-secondary small" href="../rapports/view.php?id=<?=$rapport['id']?>"><i class="fa-solid fa-eye"></i> Voir le rapport</a>
             <?php if ($peutModifierRapport): ?>
-            <a class="btn btn-secondary small" href="../rapports/edit.php?id=<?=$rapport['id']?>"><i class="fa-solid fa-pen"></i> Modifier</a>
+            <a class="btn btn-secondary small" href="../rapports/edit.php?id=<?=$rapport['id']?>"><i class="fa-solid fa-pen"></i> Modifier le rapport</a>
             <?php endif; ?>
             <?php if ($peutValiderRapport): ?>
             <a class="btn btn-primary small" href="../rapports/validate.php?id=<?=$rapport['id']?>&action=valider" onclick="return confirm('Valider ce rapport ?');">Valider</a>
