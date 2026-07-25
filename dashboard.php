@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/journal_helpers.php';
 
 requireLogin();
 $pdo = getPDO();
@@ -78,7 +79,7 @@ $dernieresVisites = $stmtVisites->fetchAll();
 $activites = [];
 if ($role !== 'technicien') {
     $activites = $pdo->query(
-        "SELECT j.action, j.description, j.created_at, u.nom, u.prenom
+        "SELECT j.action, j.description, j.created_at, j.entite_type, j.entite_id, u.nom, u.prenom
          FROM journal_activite j
          LEFT JOIN utilisateurs u ON u.id = j.utilisateur_id
          ORDER BY j.created_at DESC LIMIT 6"
@@ -216,28 +217,7 @@ require __DIR__ . '/includes/header.php';
             </div>
           </div>
 
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Utilisateur</th>
-                  <th>Action</th>
-                  <th>Description</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($activites as $a): ?>
-                <tr>
-                  <td><?=htmlspecialchars(trim(($a['prenom'] ?? '') . ' ' . ($a['nom'] ?? '')) ?: 'Système')?></td>
-                  <td><span class="badge info"><?=htmlspecialchars($a['action'])?></span></td>
-                  <td><?=htmlspecialchars($a['description'] ?? '')?></td>
-                  <td><?=htmlspecialchars(date('d/m/Y H:i', strtotime($a['created_at'])))?></td>
-                </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
+          <?php renderJournalTable($activites, 'Aucune activité enregistrée.'); ?>
         </section>
         <?php endif; ?>
 <?php require __DIR__ . '/includes/footer.php'; ?>

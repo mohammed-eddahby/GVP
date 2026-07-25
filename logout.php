@@ -8,7 +8,7 @@ if (!empty($_SESSION['user_id'])) {
         require_once __DIR__ . '/config/database.php';
         require_once __DIR__ . '/includes/auth.php';
         $pdo = getPDO();
-        logActivity($pdo, (int)$_SESSION['user_id'], 'deconnexion', 'Déconnexion utilisateur');
+        logActivity($pdo, (int)$_SESSION['user_id'], 'deconnexion', 'Déconnexion utilisateur', null, null, 'utilisateur', (int)$_SESSION['user_id']);
     } catch (Throwable $e) {
         // On ignore silencieusement toute erreur de journalisation au logout.
     }

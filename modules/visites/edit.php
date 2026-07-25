@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':notes' => $form['notes'] ?: null,
                 ':id' => $id,
             ]);
-            logActivity($pdo, (int)$user['id'], 'modification_visite', 'Modification de la visite du ' . $form['date_prevue'], null, (int)$form['site_id']);
+            logActivity($pdo, (int)$user['id'], 'modification_visite', 'Modification de la visite du ' . $form['date_prevue'], null, (int)$form['site_id'], 'visite', $id);
             setFlash('success', 'Visite mise à jour avec succès.');
             header('Location: index.php');
             exit;

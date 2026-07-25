@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['refresh']) && csrfChe
             setFlash('error', 'Le script Python a terminé sans erreur, mais le fichier analytics_data.json n\'a pas été produit.');
         } else {
             setFlash('success', 'Analytics actualisées avec succès ');
-            logActivity($pdo, (int)$user['id'], 'refresh_analytics', 'Relance manuelle du module Python Analytics');
+            logActivity($pdo, (int)$user['id'], 'refresh_analytics', 'Relance manuelle du module Python Analytics', null, null, 'analytics', null);
         }
     } else {
         $detail = implode("\n", array_slice($output, -12));

@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':ds' => $form['soumettre'] ? date('Y-m-d H:i:s') : null,
                 ':doc_path' => $document['document_path'], ':doc_type' => $document['document_type'],
             ]);
-            logActivity($pdo, (int)$user['id'], 'creation_rapport', 'Création du rapport "' . $form['titre'] . '"', null, (int)$visite['site_id']);
+            logActivity($pdo, (int)$user['id'], 'creation_rapport', 'Création du rapport "' . $form['titre'] . '"', null, (int)$visite['site_id'], 'rapport', (int)$pdo->lastInsertId());
             setFlash('success', 'Rapport enregistré' . ($form['soumettre'] ? ' et soumis' : ' en brouillon') . '.');
             header('Location: ../visites/view.php?id=' . $visiteId);
             exit;

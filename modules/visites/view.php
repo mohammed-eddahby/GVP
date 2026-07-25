@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/journal_helpers.php';
 
 requireLogin();
 $pdo = getPDO();
@@ -50,6 +51,19 @@ $estBrouillonProprietaire = $rapport && $role === 'technicien' && (int)$rapport[
 $peutSupprimerRapport = $rapport && (can('rapports.valider') || $role === 'administrateur' || $estBrouillonProprietaire);
 $peutValiderRapport = $rapport && can('rapports.valider') && $rapport['statut'] === 'soumis';
 [$label, $badge] = $statutLabels[$visite['statut']] ?? [$visite['statut'], 'muted'];
+
+// Journal d'activité : uniquement les entrées liées à CETTE visite (filtré
+// par entite_type='visite' + entite_id), via le système de journalisation
+// existant (journal_activite / logActivity()).
+$stmtJournal = $pdo->prepare(
+    "SELECT j.action, j.description, j.created_at, j.entite_type, j.entite_id, u.nom, u.prenom
+     FROM journal_activite j
+     LEFT JOIN utilisateurs u ON u.id = j.utilisateur_id
+     WHERE j.entite_type = 'visite' AND j.entite_id = :id
+     ORDER BY j.created_at DESC"
+);
+$stmtJournal->execute([':id' => $id]);
+$activites = $stmtJournal->fetchAll();
 
 $pageTitle = 'Détail visite';
 $activeNav = 'visites';
@@ -126,5 +140,13 @@ require __DIR__ . '/../../includes/header.php';
             <?php endif; ?>
           </div>
           <?php endif; ?>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="panel-header">
+            <div><p class="eyebrow">Suivi</p><h3>Journal d'activité</h3></div>
+          </div>
+
+          <?php renderJournalTable($activites, "Aucune activité enregistrée pour cette visite."); ?>
         </section>
 <?php require __DIR__ . '/../../includes/footer.php'; ?>

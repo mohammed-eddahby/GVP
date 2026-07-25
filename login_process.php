@@ -51,7 +51,7 @@ try {
     $_SESSION['ville'] = $user['ville'];
     $_SESSION['role'] = $user['role'];
 
-    logActivity($pdo, (int)$user['id'], 'connexion', 'Connexion réussie de ' . $user['prenom'] . ' ' . $user['nom']);
+    logActivity($pdo, (int)$user['id'], 'connexion', 'Connexion réussie de ' . $user['prenom'] . ' ' . $user['nom'], null, null, 'utilisateur', (int)$user['id']);
 
     header('Location: dashboard.php');
     exit;

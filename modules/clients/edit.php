@@ -65,13 +65,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':t' => $form['telephone'] ?: null, ':a' => $form['adresse'] ?: null, ':v' => $form['ville'] ?: null,
                 ':actif' => $form['actif'], ':contrat' => $nouveauCheminContrat, ':id' => $id,
             ]);
-            logActivity($pdo, (int)$user['id'], 'modification_client', 'Modification du client ' . $form['nom_entreprise'], $id);
+            logActivity($pdo, (int)$user['id'], 'modification_client', 'Modification du client ' . $form['nom_entreprise'], $id, null, 'client', $id);
             if ((int)$target['actif'] !== (int)$form['actif']) {
                 logActivity(
                     $pdo,
                     (int)$user['id'],
                     'changement_statut_client',
                     'Statut du client ' . $form['nom_entreprise'] . ' changé en ' . ($form['actif'] ? 'Actif' : 'Inactif'),
+                    $id,
+                    null,
+                    'client',
                     $id
                 );
             }

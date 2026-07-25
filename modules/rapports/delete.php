@@ -42,7 +42,7 @@ try {
     $del = $pdo->prepare('DELETE FROM rapports WHERE id = :id');
     $del->execute([':id' => $id]);
     supprimerDocumentRapport($target['document_path'] ?? null);
-    logActivity($pdo, (int)$user['id'], 'suppression_rapport', 'Suppression du rapport "' . $target['titre'] . '"', null, $siteIdRapport !== false ? (int)$siteIdRapport : null);
+    logActivity($pdo, (int)$user['id'], 'suppression_rapport', 'Suppression du rapport "' . $target['titre'] . '"', null, $siteIdRapport !== false ? (int)$siteIdRapport : null, 'rapport', $id);
     setFlash('success', 'Rapport supprimé.');
 } catch (Throwable $e) {
     setFlash('error', 'Suppression impossible : ' . $e->getMessage());

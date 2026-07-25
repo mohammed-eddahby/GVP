@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/journal_helpers.php';
 
 requireRole(['superviseur']); // même accès que le reste du module Sites
 $pdo = getPDO();
@@ -35,13 +36,14 @@ $stmtVisites = $pdo->prepare(
 $stmtVisites->execute([':id' => $id]);
 $visites = $stmtVisites->fetchAll();
 
-// Journal d'activité : uniquement les entrées liées à CE site (filtré par site_id),
-// via le système de journalisation existant (journal_activite / logActivity()).
+// Journal d'activité : uniquement les entrées liées à CE site (filtré par
+// entite_type='site' + entite_id), via le système de journalisation
+// existant (journal_activite / logActivity()).
 $stmtJournal = $pdo->prepare(
-    "SELECT j.action, j.description, j.created_at, u.nom, u.prenom
+    "SELECT j.action, j.description, j.created_at, j.entite_type, j.entite_id, u.nom, u.prenom
      FROM journal_activite j
      LEFT JOIN utilisateurs u ON u.id = j.utilisateur_id
-     WHERE j.site_id = :id
+     WHERE j.entite_type = 'site' AND j.entite_id = :id
      ORDER BY j.created_at DESC"
 );
 $stmtJournal->execute([':id' => $id]);
@@ -142,31 +144,6 @@ require __DIR__ . '/../../includes/header.php';
             <div><p class="eyebrow">Journal</p><h3>Journal d'activité</h3></div>
           </div>
 
-          <?php if (!$activites): ?>
-          <div class="empty-state"><i class="fa-solid fa-clock-rotate-left"></i>Aucune activité enregistrée pour ce site.</div>
-          <?php else: ?>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date et heure</th>
-                  <th>Utilisateur</th>
-                  <th>Action effectuée</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($activites as $a): ?>
-                <tr>
-                  <td><?=htmlspecialchars(date('d/m/Y H:i', strtotime($a['created_at'])))?></td>
-                  <td><?=htmlspecialchars(trim(($a['prenom'] ?? '') . ' ' . ($a['nom'] ?? '')) ?: 'Système')?></td>
-                  <td><span class="badge info"><?=htmlspecialchars($a['action'])?></span></td>
-                  <td><?=htmlspecialchars($a['description'] ?? '')?></td>
-                </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-          <?php endif; ?>
+          <?php renderJournalTable($activites, "Aucune activité enregistrée pour ce site."); ?>
         </section>
 <?php require __DIR__ . '/../../includes/footer.php'; ?>

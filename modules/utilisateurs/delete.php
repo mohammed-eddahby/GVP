@@ -29,7 +29,7 @@ try {
     if ($target) {
         $del = $pdo->prepare('DELETE FROM utilisateurs WHERE id = :id');
         $del->execute([':id' => $id]);
-        logActivity($pdo, (int)$user['id'], 'suppression_utilisateur', 'Suppression de ' . $target['prenom'] . ' ' . $target['nom']);
+        logActivity($pdo, (int)$user['id'], 'suppression_utilisateur', 'Suppression de ' . $target['prenom'] . ' ' . $target['nom'], null, null, 'utilisateur', $id);
         setFlash('success', 'Utilisateur supprimé.');
     } else {
         setFlash('error', 'Utilisateur introuvable.');

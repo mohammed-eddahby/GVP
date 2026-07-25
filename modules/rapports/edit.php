@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $siteIdStmt = $pdo->prepare('SELECT site_id FROM visites WHERE id = :id');
             $siteIdStmt->execute([':id' => (int)$target['visite_id']]);
             $siteIdRapport = $siteIdStmt->fetchColumn();
-            logActivity($pdo, (int)$user['id'], 'modification_rapport', 'Modification du rapport "' . $form['titre'] . '"', null, $siteIdRapport !== false ? (int)$siteIdRapport : null);
+            logActivity($pdo, (int)$user['id'], 'modification_rapport', 'Modification du rapport "' . $form['titre'] . '"', null, $siteIdRapport !== false ? (int)$siteIdRapport : null, 'rapport', $id);
             setFlash('success', 'Rapport mis à jour' . ($form['soumettre'] ? ' et soumis' : '') . '.');
             header('Location: ../visites/view.php?id=' . (int)$target['visite_id']);
             exit;

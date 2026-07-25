@@ -29,7 +29,7 @@ if (!$target || !can('visites.gerer')) {
 try {
     $del = $pdo->prepare('DELETE FROM visites WHERE id = :id');
     $del->execute([':id' => $id]);
-    logActivity($pdo, (int)$user['id'], 'suppression_visite', 'Suppression de la visite du ' . $target['date_prevue'], null, (int)$target['site_id']);
+    logActivity($pdo, (int)$user['id'], 'suppression_visite', 'Suppression de la visite du ' . $target['date_prevue'], null, (int)$target['site_id'], 'visite', $id);
     setFlash('success', 'Visite supprimée.');
 } catch (Throwable $e) {
     setFlash('error', 'Suppression impossible : ' . $e->getMessage());

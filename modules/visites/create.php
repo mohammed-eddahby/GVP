@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':statut' => $form['statut'],
                 ':notes' => $form['notes'] ?: null,
             ]);
-            logActivity($pdo, (int)$user['id'], 'creation_visite', 'Création d\'une visite le ' . $form['date_prevue'], null, (int)$form['site_id']);
+            logActivity($pdo, (int)$user['id'], 'creation_visite', 'Création d\'une visite le ' . $form['date_prevue'], null, (int)$form['site_id'], 'visite', (int)$pdo->lastInsertId());
             setFlash('success', 'Visite créée avec succès.');
             header('Location: index.php');
             exit;

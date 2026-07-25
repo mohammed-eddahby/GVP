@@ -40,6 +40,17 @@ $nomTelecharge = preg_replace('/[^A-Za-z0-9_\-]+/', '_', (string)$client['nom_en
 $nomTelecharge = trim($nomTelecharge, '_') ?: 'contrat';
 $nomTelecharge .= '_contrat_maintenance.pdf';
 
+logActivity(
+    $pdo,
+    (int)$user['id'],
+    'telechargement_contrat',
+    ($mode === 'view' ? 'Consultation' : 'Téléchargement') . ' du contrat de maintenance de "' . $client['nom_entreprise'] . '"',
+    $id,
+    null,
+    'client',
+    $id
+);
+
 // Nettoie tout tampon de sortie pour éviter de corrompre le flux binaire
 while (ob_get_level() > 0) {
     ob_end_clean();

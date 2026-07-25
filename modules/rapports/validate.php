@@ -41,7 +41,8 @@ try {
     );
     $upd->execute([':statut' => $newStatut, ':vp' => $user['id'], ':id' => $id]);
 
-    logActivity($pdo, (int)$user['id'], 'validation_rapport', ucfirst($action) . ' du rapport "' . $rapport['titre'] . '"', null, (int)$rapport['site_id']);
+    $actionSlug = $action === 'valider' ? 'validation_rapport' : 'rejet_rapport';
+    logActivity($pdo, (int)$user['id'], $actionSlug, ucfirst($action) . ' du rapport "' . $rapport['titre'] . '"', null, (int)$rapport['site_id'], 'rapport', $id);
     setFlash('success', 'Rapport ' . ($action === 'valider' ? 'validé' : 'rejeté') . '.');
 } catch (Throwable $e) {
     setFlash('error', 'Erreur : ' . $e->getMessage());

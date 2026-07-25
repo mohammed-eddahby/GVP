@@ -50,6 +50,17 @@ $nomTelecharge = preg_replace('/[^A-Za-z0-9_\-]+/', '_', (string)$rapport['titre
 $nomTelecharge = trim($nomTelecharge, '_') ?: 'rapport';
 $nomTelecharge .= '.' . $extension;
 
+logActivity(
+    $pdo,
+    (int)$user['id'],
+    'telechargement_rapport',
+    ($mode === 'view' ? 'Consultation' : 'Téléchargement') . ' du document du rapport "' . $rapport['titre'] . '"',
+    null,
+    null,
+    'rapport',
+    $id
+);
+
 // Nettoie tout tampon de sortie pour éviter de corrompre le flux binaire
 while (ob_get_level() > 0) {
     ob_end_clean();

@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':role' => $form['role'],
                 ':cba' => $form['can_be_assigned_to_visits'],
             ]);
-            logActivity($pdo, (int)$user['id'], 'creation_utilisateur', 'Création de ' . $form['prenom'] . ' ' . $form['nom']);
+            logActivity($pdo, (int)$user['id'], 'creation_utilisateur', 'Création de ' . $form['prenom'] . ' ' . $form['nom'], null, null, 'utilisateur', (int)$pdo->lastInsertId());
             setFlash('success', 'Utilisateur créé avec succès.');
             header('Location: index.php');
             exit;

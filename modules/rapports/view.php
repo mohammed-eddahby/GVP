@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/journal_helpers.php';
 
 requireLogin();
 $pdo = getPDO();
@@ -35,6 +36,19 @@ $statutLabels = [
     'valide' => ['Validé', 'success'], 'rejete' => ['Rejeté', 'danger'],
 ];
 [$label, $badge] = $statutLabels[$rapport['statut']] ?? [$rapport['statut'], 'muted'];
+
+// Journal d'activité : uniquement les entrées liées à CE rapport (filtré
+// par entite_type='rapport' + entite_id), via le système de journalisation
+// existant (journal_activite / logActivity()).
+$stmtJournal = $pdo->prepare(
+    "SELECT j.action, j.description, j.created_at, j.entite_type, j.entite_id, u.nom, u.prenom
+     FROM journal_activite j
+     LEFT JOIN utilisateurs u ON u.id = j.utilisateur_id
+     WHERE j.entite_type = 'rapport' AND j.entite_id = :id
+     ORDER BY j.created_at DESC"
+);
+$stmtJournal->execute([':id' => $id]);
+$activites = $stmtJournal->fetchAll();
 
 $pageTitle = 'Détail rapport';
 $activeNav = 'visites';
@@ -76,5 +90,13 @@ require __DIR__ . '/../../includes/header.php';
             <a class="btn btn-danger" href="validate.php?id=<?=$rapport['id']?>&action=rejeter" onclick="return confirm('Rejeter ce rapport ?');">Rejeter</a>
           </div>
           <?php endif; ?>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="panel-header">
+            <div><p class="eyebrow">Suivi</p><h3>Journal d'activité</h3></div>
+          </div>
+
+          <?php renderJournalTable($activites, "Aucune activité enregistrée pour ce rapport."); ?>
         </section>
 <?php require __DIR__ . '/../../includes/footer.php'; ?>

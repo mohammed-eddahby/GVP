@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':lat' => $form['latitude'] !== '' ? $form['latitude'] : null,
                 ':lng' => $form['longitude'] !== '' ? $form['longitude'] : null,
             ]);
-            logActivity($pdo, (int)$user['id'], 'creation_site', 'Création du site ' . $form['nom_site'], (int)$form['client_id'], (int)$pdo->lastInsertId());
+            logActivity($pdo, (int)$user['id'], 'creation_site', 'Création du site ' . $form['nom_site'], (int)$form['client_id'], (int)$pdo->lastInsertId(), 'site', (int)$pdo->lastInsertId());
             setFlash('success', 'Site créé avec succès.');
             header('Location: index.php');
             exit;

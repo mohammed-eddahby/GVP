@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':v' => $form['ville'] ?: null, ':lat' => $form['latitude'] !== '' ? $form['latitude'] : null,
                 ':lng' => $form['longitude'] !== '' ? $form['longitude'] : null, ':actif' => $form['actif'], ':id' => $id,
             ]);
-            logActivity($pdo, (int)$user['id'], 'modification_site', 'Modification du site ' . $form['nom_site'], (int)$form['client_id'], $id);
+            logActivity($pdo, (int)$user['id'], 'modification_site', 'Modification du site ' . $form['nom_site'], (int)$form['client_id'], $id, 'site', $id);
             if ((int)$target['actif'] !== (int)$form['actif']) {
                 logActivity(
                     $pdo,
@@ -51,6 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'changement_statut_site',
                     'Statut du site ' . $form['nom_site'] . ' changé en ' . ($form['actif'] ? 'Actif' : 'Inactif'),
                     (int)$form['client_id'],
+                    $id,
+                    'site',
                     $id
                 );
             }

@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':e' => $form['nom_entreprise'], ':c' => $form['contact_nom'] ?: null, ':em' => $form['email'] ?: null,
                 ':t' => $form['telephone'] ?: null, ':a' => $form['adresse'] ?: null, ':v' => $form['ville'] ?: null,
             ]);
-            logActivity($pdo, (int)$user['id'], 'creation_client', 'Création du client ' . $form['nom_entreprise'], (int)$pdo->lastInsertId());
+            logActivity($pdo, (int)$user['id'], 'creation_client', 'Création du client ' . $form['nom_entreprise'], (int)$pdo->lastInsertId(), null, 'client', (int)$pdo->lastInsertId());
             setFlash('success', 'Client créé avec succès.');
             header('Location: index.php');
             exit;

@@ -34,7 +34,7 @@ try {
         if ($nbVisites > 0) {
             setFlash('error', 'Impossible de supprimer ce client car il possède des visites enregistrées.');
         } else {
-            logActivity($pdo, (int)$user['id'], 'suppression_client', 'Suppression du client ' . $target['nom_entreprise'], $id);
+            logActivity($pdo, (int)$user['id'], 'suppression_client', 'Suppression du client ' . $target['nom_entreprise'], $id, null, 'client', $id);
             // ON DELETE CASCADE supprime automatiquement les sites/rapports liés (sans visite ici).
             // ON DELETE SET NULL sur journal_activite.client_id conserve la ligne de log ci-dessus.
             $del = $pdo->prepare('DELETE FROM clients WHERE id = :id');

@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':cba' => $form['can_be_assigned_to_visits'], ':id' => $id,
                 ]);
             }
-            logActivity($pdo, (int)$user['id'], 'modification_utilisateur', 'Modification de ' . $form['prenom'] . ' ' . $form['nom']);
+            logActivity($pdo, (int)$user['id'], 'modification_utilisateur', 'Modification de ' . $form['prenom'] . ' ' . $form['nom'], null, null, 'utilisateur', $id);
             setFlash('success', 'Utilisateur mis à jour.');
             header('Location: index.php');
             exit;

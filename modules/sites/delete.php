@@ -21,7 +21,7 @@ try {
     $target = $stmt->fetch();
 
     if ($target) {
-        logActivity($pdo, (int)$user['id'], 'suppression_site', 'Suppression du site ' . $target['nom_site'], (int)$target['client_id'], $id);
+        logActivity($pdo, (int)$user['id'], 'suppression_site', 'Suppression du site ' . $target['nom_site'], (int)$target['client_id'], $id, 'site', $id);
         $del = $pdo->prepare('DELETE FROM sites WHERE id = :id');
         $del->execute([':id' => $id]);
         setFlash('success', 'Site supprimé.');

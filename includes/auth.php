@@ -116,17 +116,41 @@ function csrfField(): string
  * et/ou un site précis, afin d'alimenter les journaux d'activité affichés
  * sur les fiches client et site.
  */
-function logActivity(PDO $pdo, ?int $userId, string $action, string $description = '', ?int $clientId = null, ?int $siteId = null): void
-{
+function logActivity(
+    PDO $pdo,
+    ?int $userId,
+    string $action,
+    string $description = '',
+    ?int $clientId = null,
+    ?int $siteId = null,
+    ?string $entiteType = null,
+    ?int $entiteId = null
+): void {
     try {
+        // Si l'appelant n'a pas explicitement précisé entite_type/entite_id, on les
+        // déduit de client_id/site_id quand c'est possible (compatibilité totale
+        // avec les appels existants, qui profitent quand même du nouveau système
+        // générique sans avoir besoin d'être modifiés).
+        if ($entiteType === null) {
+            if ($siteId !== null) {
+                $entiteType = 'site';
+                $entiteId = $entiteId ?? $siteId;
+            } elseif ($clientId !== null) {
+                $entiteType = 'client';
+                $entiteId = $entiteId ?? $clientId;
+            }
+        }
+
         $stmt = $pdo->prepare(
-            'INSERT INTO journal_activite (utilisateur_id, client_id, site_id, action, description, ip_address)
-             VALUES (:uid, :cid, :sid, :action, :description, :ip)'
+            'INSERT INTO journal_activite (utilisateur_id, client_id, site_id, entite_type, entite_id, action, description, ip_address)
+             VALUES (:uid, :cid, :sid, :etype, :eid, :action, :description, :ip)'
         );
         $stmt->execute([
             ':uid' => $userId,
             ':cid' => $clientId,
             ':sid' => $siteId,
+            ':etype' => $entiteType,
+            ':eid' => $entiteId,
             ':action' => $action,
             ':description' => $description,
             ':ip' => $_SERVER['REMOTE_ADDR'] ?? null,
